@@ -56,12 +56,24 @@ jobs:
       - name: Install Capacitor CLI
         run: npm install @capacitor/cli --no-save
 
-      - name: Setup Android SDK (cmdline tools + platform-tools)
-        uses: android-actions/setup-android@v2
+      - name: Setup Android SDK (provide sdkmanager via action)
+        uses: android-actions/setup-android@v3
         with:
-          api-level: 33
-          components: platform-tools,build-tools;33.0.0
-          ndk: false
+          # 可选：指定 cmdline-tools 版本；不填也会使用 action 的默认值
+          cmdline-tools-version: 'latest'
+
+      - name: Install Android SDK components (platforms & build-tools)
+        shell: bash
+        run: |
+          echo "Check sdkmanager path & list"
+          which sdkmanager || { echo "sdkmanager not found"; exit 1; }
+          sdkmanager --list || true
+
+          echo "Installing platform-tools, platforms;android-33 and build-tools;33.0.0"
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0"
+
+          echo "Accepting licenses"
+          yes | sdkmanager --licenses
 
       - name: Capacitor init (if needed) and add android
         run: |
@@ -70,6 +82,15 @@ jobs:
           npx cap init "$APP_NAME" "$APP_ID" --web-dir=dist || true
           npx cap add android || true
           npx cap sync android
+
+      - name: Ensure gradlew is executable
+        shell: bash
+        run: |
+          if [ -f android/gradlew ]; then
+            chmod +x android/gradlew
+          else
+            echo "Warning: android/gradlew not found"
+          fi
 
       - name: Build Android debug APK
         working-directory: android
