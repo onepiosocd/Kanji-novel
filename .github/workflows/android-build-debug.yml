@@ -1,4 +1,4 @@
-name: Android Debug Build (Capacitor) + extract SVGs
+name: Android Debug Build (Capacitor)
 
 on:
   push:
@@ -41,6 +41,8 @@ jobs:
           set -euo pipefail
           echo "Working dir: repo root"
           ls -la
+
+          # 如果有 lockfile 使用 npm ci，否则用 npm install
           if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
             echo "Using npm ci"
             npm ci
@@ -49,57 +51,19 @@ jobs:
             npm install
           fi
 
-      - name: Debug: list repo & show zip contents (top)
-        shell: bash
-        run: |
-          echo "*** repo root listing ***"
-          ls -la
-          echo ">>> show public (if exists)"
-          ls -la public || true
-          echo ">>> list root zip if exists"
-          if [ -f kanjivg-20250422-all.zip ]; then
-            echo "Found kanjivg zip, listing top entries:"
-            unzip -l kanjivg-20250422-all.zip | head -n 40 || true
-          else
-            echo "No kanjivg zip found at repo root."
-          fi
-
-      - name: Extract up to 200 SVGs from zip into public/svgs (safe)
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f kanjivg-20250422-all.zip ]; then
-            mkdir -p public/svgs
-            echo "Listing all .svg entries in zip and extracting first 200..."
-            unzip -l kanjivg-20250422-all.zip | awk '{print $4}' | grep -i '\.svg$' | head -n 200 > /tmp/svg_list.txt || true
-            if [ -s /tmp/svg_list.txt ]; then
-              while IFS= read -r f; do
-                echo "Extracting: $f"
-                unzip -j -o kanjivg-20250422-all.zip "$f" -d public/svgs || true
-              done < /tmp/svg_list.txt
-              echo "Extracted (top) files:"
-              ls -la public/svgs | head -n 50
-            else
-              echo "No svg entries found in zip (or different internal structure)."
-            fi
-          else
-            echo "kanjivg zip not present; skipping extract."
-          fi
-
       - name: Build web (vite)
         shell: bash
         run: |
           set -euo pipefail
           echo "Running npm run build"
           npm run build
-          echo "After build: show dist listing"
-          ls -la dist || true
-          ls -la dist/svgs || true
 
       - name: Install Capacitor CLI and Android platform package (Capacitor v5)
         shell: bash
         run: |
+          # 固定安装 Capacitor 5.x 版本，避免 peer 冲突
           npm install @capacitor/cli@5 @capacitor/android@5 --no-save --no-audit --no-fund
+          echo "Installed Capacitor packages:"
           npx cap --version || true
 
       - name: Setup Android SDK (provide sdkmanager via action)
@@ -111,7 +75,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "Check sdkmanager path & list"
+          which sdkmanager || { echo "sdkmanager not found"; exit 1; }
+          sdkmanager --list || true
+
+          echo "Installing platform-tools, platforms;android-33 and build-tools;33.0.0"
           sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0"
+
+          echo "Accepting licenses (ignore broken pipe if it occurs)"
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
 
       - name: Capacitor init (if needed) and add android
@@ -145,9 +116,3 @@ jobs:
         with:
           name: android-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
-
-      - name: Upload dist artifact for inspection
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-dist
-          path: dist
