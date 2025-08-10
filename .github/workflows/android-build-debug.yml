@@ -66,13 +66,11 @@ jobs:
 
       - name: Extract up to 200 SVGs from zip into public/svgs (safe)
         shell: bash
-        if: always()
         run: |
           set -euo pipefail
           if [ -f kanjivg-20250422-all.zip ]; then
             mkdir -p public/svgs
             echo "Listing all .svg entries in zip and extracting first 200..."
-            # get svg file list inside zip, extract first 200 safely
             unzip -l kanjivg-20250422-all.zip | awk '{print $4}' | grep -i '\.svg$' | head -n 200 > /tmp/svg_list.txt || true
             if [ -s /tmp/svg_list.txt ]; then
               while IFS= read -r f; do
