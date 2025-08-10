@@ -1,0 +1,15 @@
+{
+  "name": "my-kanji-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@capacitor/core": "^5.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
