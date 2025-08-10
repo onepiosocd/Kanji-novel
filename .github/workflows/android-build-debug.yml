@@ -57,6 +57,7 @@ jobs:
           set -euo pipefail
           echo "Running npm run build"
           npm run build
+          ls -la dist/svgs | head -n 20
 
       - name: Install Capacitor CLI and Android platform package (Capacitor v5)
         shell: bash
