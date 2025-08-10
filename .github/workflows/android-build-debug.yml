@@ -5,14 +5,12 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
-env:
-  NODE_VERSION: 18
-  JAVA_VERSION: 17
-  ANDROID_SDK_ROOT: ${{ runner.os }}/android-sdk
-
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      NODE_VERSION: 18
+      JAVA_VERSION: 17
 
     steps:
       - name: Checkout
@@ -55,10 +53,8 @@ jobs:
 
       - name: Capacitor init (if needed) and add android
         run: |
-          # set app id and name (change if you want)
           APP_ID=com.example.mykanjiapp
           APP_NAME="MyKanjiApp"
-          # init if android/ doesn't exist (ignore errors if already initialized)
           npx cap init "$APP_NAME" "$APP_ID" --web-dir=dist || true
           npx cap add android || true
           npx cap sync android
