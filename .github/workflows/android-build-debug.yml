@@ -27,7 +27,7 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
-      - name: Cache node modules
+      - name: Cache npm
         uses: actions/cache@v4
         with:
           path: ~/.npm
@@ -35,9 +35,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
 
-      - name: Install dependencies
+      - name: Install dependencies (auto-detect lockfile)
         shell: bash
         run: |
+          set -euo pipefail
           echo "Working dir: repo root"
           ls -la
 
@@ -51,20 +52,26 @@ jobs:
           fi
 
       - name: Build web (vite)
-        run: npm run build
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Running npm run build"
+          npm run build
 
       - name: Install Capacitor CLI
+        shell: bash
         run: npm install @capacitor/cli --no-save
 
       - name: Setup Android SDK (provide sdkmanager via action)
         uses: android-actions/setup-android@v3
         with:
-          # 可选：指定 cmdline-tools 版本；不填也会使用 action 的默认值
+          # 可选：指定 cmdline-tools 版本；'latest' 或具体号都行
           cmdline-tools-version: 'latest'
 
       - name: Install Android SDK components (platforms & build-tools)
         shell: bash
         run: |
+          set -euo pipefail
           echo "Check sdkmanager path & list"
           which sdkmanager || { echo "sdkmanager not found"; exit 1; }
           sdkmanager --list || true
@@ -72,13 +79,17 @@ jobs:
           echo "Installing platform-tools, platforms;android-33 and build-tools;33.0.0"
           sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0"
 
-          echo "Accepting licenses"
-          yes | sdkmanager --licenses
+          echo "Accepting licenses (ignore broken pipe if it occurs)"
+          # 有时 yes 会产生 broken pipe；使用 || true 吞掉非零退出码，防止步骤失败
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
 
       - name: Capacitor init (if needed) and add android
+        shell: bash
         run: |
+          set -euo pipefail
           APP_ID=com.example.mykanjiapp
           APP_NAME="MyKanjiApp"
+          # 如果已 init 或已 add android，这些命令不会失败（我们用 || true）
           npx cap init "$APP_NAME" "$APP_ID" --web-dir=dist || true
           npx cap add android || true
           npx cap sync android
@@ -94,7 +105,10 @@ jobs:
 
       - name: Build Android debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon -Porg.gradle.jvmargs="-Xmx2048m"
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew assembleDebug --no-daemon -Porg.gradle.jvmargs="-Xmx2048m"
 
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
