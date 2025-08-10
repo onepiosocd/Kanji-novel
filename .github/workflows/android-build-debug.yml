@@ -35,26 +35,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
 
-    - name: Install dependencies
-  shell: bash
-  run: |
-    echo "Working dir: repo root"
-    ls -la
+      - name: Install dependencies
+        shell: bash
+        run: |
+          echo "Working dir: repo root"
+          ls -la
 
-    # 如果有 lockfile 使用 npm ci，否则用 npm install
-    if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-      echo "Using npm ci"
-      npm ci
-    else
-      echo "No lockfile - using npm install"
-      npm install
-    fi
-    
-        
-    
-  
+          # 如果有 lockfile 使用 npm ci，否则用 npm install
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            echo "Using npm ci"
+            npm ci
+          else
+            echo "No lockfile - using npm install"
+            npm install
+          fi
 
-     
       - name: Build web (vite)
         run: npm run build
 
@@ -85,4 +80,3 @@ jobs:
         with:
           name: android-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
-          
