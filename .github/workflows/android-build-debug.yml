@@ -35,13 +35,26 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
 
-      - name: Install dependencies
-        working-directory: ./web   # 若前端在子資料夾，改成你的路徑；若在根目錄則移除這行
-        run: npm install
+    - name: Install dependencies
+  shell: bash
+  run: |
+    echo "Working dir: repo root"
+    ls -la
+
+    # 如果有 lockfile 使用 npm ci，否则用 npm install
+    if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+      echo "Using npm ci"
+      npm ci
+    else
+      echo "No lockfile - using npm install"
+      npm install
+    fi
+    
         
     
   
 
+     
       - name: Build web (vite)
         run: npm run build
 
